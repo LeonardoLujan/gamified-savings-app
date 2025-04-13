@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../lib/firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, getDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 
 const GOOGLE_VISION_API_KEY = 'AIzaSyAG7bG1yg7lQ0V61C6j6kwH0FdIeEKoXF0';
 
@@ -121,9 +121,14 @@ export default function CameraScreen() {
 
   const submitReceiptToFirebase = async () => {
     if (!receiptInfo) return;
+  
     try {
       const studentID = await AsyncStorage.getItem('studentID');
+      if (!studentID) throw new Error("Missing student ID");
+  
       const numericTotal = parseFloat(receiptInfo.total.replace('$', ''));
+  
+      // Convert date string to Date object
       let parsedDate: Date | null = null;
       if (/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(receiptInfo.date)) {
         const [month, day, year] = receiptInfo.date.split('/');
@@ -133,14 +138,42 @@ export default function CameraScreen() {
         const tryDate = new Date(receiptInfo.date);
         if (!isNaN(tryDate.getTime())) parsedDate = tryDate;
       }
-      await addDoc(collection(db, 'receipts'), {
-        studentID,
-        merchant: receiptInfo.merchant,
-        total: numericTotal,
-        date: parsedDate ?? null,
-        createdAt: serverTimestamp(),
+  
+      // 🔍 Fetch user document
+      const userRef = doc(db, 'users', studentID);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) throw new Error("User not found");
+  
+      const userData = userSnap.data();
+      const receipts = userData.receipts || [];
+      const currentPoints = userData.rewardPoints || 0;
+  
+      // 📊 Calculate average of existing receipt totals
+      const previousTotals = receipts.map((r: any) => parseFloat(r.total)).filter((n: number) => !isNaN(n));
+      const average = previousTotals.length > 0
+        ? previousTotals.reduce((sum: number, n: number) => sum + n, 0) / previousTotals.length
+        : null;
+  
+      let newPoints = currentPoints;
+  
+      if (average !== null && numericTotal <= average * 0.9) {
+        newPoints += 100;
+        console.log("🎉 Awarded bonus: +100 points");
+      } else {
+        console.log("📉 No bonus awarded");
+      }
+  
+      // 🔁 Update user document
+      await updateDoc(userRef, {
+        rewardPoints: newPoints,
+        receipts: arrayUnion({
+          merchant: receiptInfo.merchant,
+          total: numericTotal.toFixed(2),
+          date: parsedDate?.toISOString() || null,
+        }),
       });
-      console.log("✅ Receipt submitted to Firebase");
+  
+      console.log("✅ Receipt submitted and user updated");
       resetCamera();
     } catch (err) {
       console.error("❌ Failed to submit receipt:", err);
