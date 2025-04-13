@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
   Pressable,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { db } from '@/lib/firebaseConfig';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const rewards = [
   { title: 'Free drink at any on campus restaurant', image: require('@/assets/images/rewards/drink.webp'), cost: 100 },
@@ -25,19 +28,44 @@ const rewards = [
 ];
 
 export default function RoadmapScreen() {
-  const [userPoints, setUserPoints] = useState(2000);
+  const [userPoints, setUserPoints] = useState<number>(0);
+  const [studentID, setStudentID] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedReward, setSelectedReward] = useState(null);
+  const [selectedReward, setSelectedReward] = useState<any>(null);
   const [code, setCode] = useState('');
 
   const rockyIndex = Math.max(0, rewards.findIndex(reward => reward.cost > userPoints) - 1);
 
-  const handleRedeem = () => {
-    if (selectedReward && userPoints >= selectedReward.cost) {
+  // Fetch user points on mount
+  useEffect(() => {
+    const fetchPoints = async () => {
+      const id = await AsyncStorage.getItem('studentID');
+      setStudentID(id);
+      if (!id) return;
+      const userRef = doc(db, 'users', id);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserPoints(data.rewardPoints || 0);
+      }
+    };
+    fetchPoints();
+  }, []);
+
+  const handleRedeem = async () => {
+    if (!selectedReward || !studentID) return;
+
+    if (userPoints >= selectedReward.cost) {
       const newPoints = userPoints - selectedReward.cost;
       const generatedCode = `#SB${Math.floor(1000 + Math.random() * 9000)}`;
       setUserPoints(newPoints);
       setCode(generatedCode);
+
+      // Update Firestore with new rewardPoints
+      const userRef = doc(db, 'users', studentID);
+      await updateDoc(userRef, {
+        rewardPoints: newPoints,
+      });
     }
   };
 
@@ -83,7 +111,6 @@ export default function RoadmapScreen() {
         );
       })}
 
-      {/* Modal for redeeming prize */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
