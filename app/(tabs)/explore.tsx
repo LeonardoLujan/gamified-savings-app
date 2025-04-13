@@ -1,109 +1,207 @@
-import { StyleSheet, Image, Platform } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+  Modal,
+  TouchableOpacity,
+  Pressable,
+} from 'react-native';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+const rewards = [
+  { title: 'Free drink at any on campus restaurant', image: require('@/assets/images/rewards/drink.webp'), cost: 100 },
+  { title: 'Free Lanyard', image: require('@/assets/images/rewards/landyrd.webp'), cost: 200 },
+  { title: 'Free Keychain', image: require('@/assets/images/rewards/keychain.webp'), cost: 300 },
+  { title: 'Free USF flag', image: require('@/assets/images/rewards/flag.webp'), cost: 400 },
+  { title: 'Free meal', image: require('@/assets/images/rewards/freemeal.webp'), cost: 500 },
+  { title: 'Free t-shirt', image: require('@/assets/images/rewards/apparel.webp'), cost: 600 },
+  { title: 'Football VIP student section', image: require('@/assets/images/rewards/football.png'), cost: 700 },
+  { title: 'Free backpack', image: require('@/assets/images/rewards/bp.webp'), cost: 800 },
+  { title: 'Free hoodie', image: require('@/assets/images/rewards/hoodie.webp'), cost: 900 },
+  { title: '40% discount on semester parking', image: require('@/assets/images/rewards/car1.webp'), cost: 1000 },
+];
 
-export default function TabTwoScreen() {
+export default function RoadmapScreen() {
+  const [userPoints, setUserPoints] = useState(2000);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [code, setCode] = useState('');
+
+  const rockyIndex = Math.max(0, rewards.findIndex(reward => reward.cost > userPoints) - 1);
+
+  const handleRedeem = () => {
+    if (selectedReward && userPoints >= selectedReward.cost) {
+      const newPoints = userPoints - selectedReward.cost;
+      const generatedCode = `#SB${Math.floor(1000 + Math.random() * 9000)}`;
+      setUserPoints(newPoints);
+      setCode(generatedCode);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Expre</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      style={{ backgroundColor: '#006747' }}
+    >
+      <Text style={styles.header}>Your Rewards Roadmap</Text>
+      <Text style={styles.pointsDisplay}>Current Points: {userPoints}</Text>
+
+      {rewards.map((reward, index) => {
+        const isUnlocked = userPoints >= reward.cost;
+        const showRocky = index === rockyIndex;
+
+        return (
+          <View key={index} style={styles.levelContainer}>
+            {showRocky && (
+              <Image
+                source={require('@/assets/images/Mascot.png')}
+                style={styles.rocky}
+              />
+            )}
+
+            <TouchableOpacity
+              disabled={!isUnlocked}
+              onPress={() => {
+                setSelectedReward(reward);
+                setModalVisible(true);
+                setCode('');
+              }}
+              style={styles.levelBubble}
+            >
+              <Image
+                source={reward.image}
+                style={[styles.rewardImage, !isUnlocked && styles.grayscale]}
+              />
+            </TouchableOpacity>
+
+            <Text style={[styles.rewardText, { opacity: isUnlocked ? 1 : 0.4 }]}>Level {index + 1}: {reward.title}</Text>
+            <Text style={[styles.pointsText, { opacity: isUnlocked ? 1 : 0.4 }]}>Requires {reward.cost} Points</Text>
+          </View>
+        );
+      })}
+
+      {/* Modal for redeeming prize */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{selectedReward?.title}</Text>
+            {code ? (
+              <Text style={styles.codeText}>Your Code: {code}</Text>
+            ) : (
+              <Pressable style={styles.redeemButton} onPress={handleRedeem}>
+                <Text style={styles.redeemText}>Redeem Prize</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => setModalVisible(false)}>
+              <Text style={{ marginTop: 20, color: '#006747', fontWeight: 'bold' }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 10,
+  },
+  pointsDisplay: {
+    fontSize: 16,
+    color: 'white',
+    marginBottom: 30,
+  },
+  levelContainer: {
+    marginVertical: 50,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  rocky: {
+    width: 80,
+    height: 80,
+    position: 'absolute',
+    top: -80,
+    zIndex: 2,
+    resizeMode: 'contain',
+  },
+  levelBubble: {
+    backgroundColor: 'white',
+    borderRadius: 100,
+    width: 130,
+    height: 130,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  rewardImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+  },
+  rewardText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
+    color: 'white',
+  },
+  pointsText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#f0f0f0',
+    marginTop: 4,
+  },
+  grayscale: {
+    opacity: 0.3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#006747',
+    textAlign: 'center',
+  },
+  codeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#006747',
+    marginBottom: 10,
+  },
+  redeemButton: {
+    backgroundColor: '#006747',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  redeemText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
