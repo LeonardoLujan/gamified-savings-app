@@ -106,7 +106,7 @@ export default function HomeScreen() {
           }}
         />
 
-        <Text style={[styles.title, { color: COLORS.text }]}>Welcome to SaveABull 💶!</Text>
+        <Text style={[styles.title, { color: COLORS.text }]}>Welcome to Save-A-Bull 💵!</Text>
 
         <TouchableOpacity
           onPress={toggleTheme}
