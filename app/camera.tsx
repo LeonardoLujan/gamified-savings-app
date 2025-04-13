@@ -1,12 +1,12 @@
 // CameraScreen.tsx
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useState, useEffect, useRef } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../lib/firebaseConfig';
-import { doc, collection, addDoc, serverTimestamp, getDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 const GOOGLE_VISION_API_KEY = 'AIzaSyAG7bG1yg7lQ0V61C6j6kwH0FdIeEKoXF0';
 
@@ -22,11 +22,7 @@ export default function CameraScreen() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [receiptInfo, setReceiptInfo] = useState<{
-    merchant: string;
-    total: string;
-    date: string;
-  } | null>(null);
+  const [receiptInfo, setReceiptInfo] = useState<{ merchant: string; total: string; date: string } | null>(null);
   const cameraRef = useRef<any>(null);
 
   useEffect(() => {
@@ -65,7 +61,7 @@ export default function CameraScreen() {
       setExtractedText(text);
       await parseReceiptData(text);
     } catch (error) {
-      console.error("❌ Vision API Error:", error);
+      console.error('❌ Vision API Error:', error);
       setExtractedText('Failed to extract text from image.');
     } finally {
       setIsProcessing(false);
@@ -115,20 +111,17 @@ export default function CameraScreen() {
     if (total === 'Not found' && largestAmount > 0) {
       total = `$${largestAmount.toFixed(2)}`;
     }
-    const parsed = { merchant, total, date };
-    setReceiptInfo(parsed);
+    setReceiptInfo({ merchant, total, date });
   };
 
   const submitReceiptToFirebase = async () => {
     if (!receiptInfo) return;
-  
+
     try {
       const studentID = await AsyncStorage.getItem('studentID');
-      if (!studentID) throw new Error("Missing student ID");
-  
+      if (!studentID) throw new Error('Missing student ID');
+
       const numericTotal = parseFloat(receiptInfo.total.replace('$', ''));
-  
-      // Convert date string to Date object
       let parsedDate: Date | null = null;
       if (/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(receiptInfo.date)) {
         const [month, day, year] = receiptInfo.date.split('/');
@@ -138,32 +131,44 @@ export default function CameraScreen() {
         const tryDate = new Date(receiptInfo.date);
         if (!isNaN(tryDate.getTime())) parsedDate = tryDate;
       }
-  
-      // 🔍 Fetch user document
+
       const userRef = doc(db, 'users', studentID);
       const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) throw new Error("User not found");
-  
+      if (!userSnap.exists()) throw new Error('User not found');
+
       const userData = userSnap.data();
       const receipts = userData.receipts || [];
       const currentPoints = userData.rewardPoints || 0;
-  
-      // 📊 Calculate average of existing receipt totals
-      const previousTotals = receipts.map((r: any) => parseFloat(r.total)).filter((n: number) => !isNaN(n));
-      const average = previousTotals.length > 0
-        ? previousTotals.reduce((sum: number, n: number) => sum + n, 0) / previousTotals.length
+
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      const fourteenDaysAgo = new Date(now);
+      fourteenDaysAgo.setDate(now.getDate() - 14);
+
+      const lastWeekReceipts = receipts.filter((r: any) => {
+        const rDate = new Date(r.date);
+        return rDate >= fourteenDaysAgo && rDate < sevenDaysAgo;
+      });
+
+      const lastWeekAvg = lastWeekReceipts.length > 0
+        ? lastWeekReceipts.reduce((sum: number, r: any) => sum + parseFloat(r.total), 0) / lastWeekReceipts.length
         : null;
-  
-      let newPoints = currentPoints;
-  
-      if (average !== null && numericTotal <= average * 0.9) {
-        newPoints += 100;
-        console.log("🎉 Awarded bonus: +100 points");
-      } else {
-        console.log("📉 No bonus awarded");
+
+      if (lastWeekAvg !== null) {
+        console.log(`📊 Last week's average: $${lastWeekAvg.toFixed(2)}`);
       }
-  
-      // 🔁 Update user document
+
+      let newPoints = currentPoints;
+      let bonusPoints = 0;
+
+      if (lastWeekAvg !== null && numericTotal < lastWeekAvg) {
+        const dollarsSaved = Math.floor(lastWeekAvg - numericTotal);
+        bonusPoints = dollarsSaved * 10;
+        newPoints += bonusPoints;
+        console.log(`🎉 Earned ${bonusPoints} pts for saving $${dollarsSaved}`);
+      }
+
       await updateDoc(userRef, {
         rewardPoints: newPoints,
         receipts: arrayUnion({
@@ -172,13 +177,18 @@ export default function CameraScreen() {
           date: parsedDate?.toISOString() || null,
         }),
       });
-  
-      console.log("✅ Receipt submitted and user updated");
+
+      if (bonusPoints > 0) {
+        Alert.alert('✅ Points updated', `You earned ${bonusPoints} reward points!`);
+      }
+
+      console.log('✅ Receipt submitted and user updated');
       resetCamera();
     } catch (err) {
-      console.error("❌ Failed to submit receipt:", err);
+      console.error('❌ Failed to submit receipt:', err);
     }
   };
+
 
   const takePicture = async () => {
     if (!cameraRef.current || isProcessing) return;
