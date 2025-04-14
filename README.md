@@ -9,4 +9,4 @@ Using React Native, Google Gemini Vision, and Google Firebase, we are able to cr
 
 This app is made with the intention that it can be partnered with the University of South Florida, increasing student engagement on campus, benefitting both the student and the university.
 
-Check out our demo video here: https://youtube.com/shorts/uDDNgNJzBH8?si=jJgrbovsfpRNs3GG
+Check out our demo video here: https://www.youtube.com/watch?v=uDDNgNJzBH8
